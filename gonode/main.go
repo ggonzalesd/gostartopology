@@ -1,42 +1,27 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 )
 
-func enableCors(w *http.ResponseWriter) {
-	(*w).Header().Set("Access-Control-Allow-Origin", "*")
-	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-}
-
-func updateFromEditor(w http.ResponseWriter, req *http.Request) {
-	enableCors(&w)
-
-	var documentEditor DocumentEditor
-
-	decoder := json.NewDecoder(req.Body)
-
-	if decoder.Decode(&documentEditor) == nil {
-		fmt.Println("---------------------------------")
-		for _, lines := range documentEditor.Doc {
-			fmt.Println(lines)
-		}
-		fmt.Println("---------------------------------")
-		fmt.Println()
-
-	} else {
-		fmt.Println("ERROR")
-	}
-}
+var (
+	document   DocumentEditor
+	docChannel chan bool
+)
 
 func main() {
+	docChannel = make(chan bool, 1)
+
+	fmt.Println("Time: ", time.Now().UnixNano())
+
+	document = DocumentEditor{time.Now().UnixNano(), make([]string, 0)}
 
 	http.HandleFunc("/update-doc", updateFromEditor)
+	http.HandleFunc("/refresh-doc", refreshToEditor)
 
 	fmt.Println("Listen al 8080")
-	http.ListenAndServe("192.168.1.44:8080", nil)
+	http.ListenAndServe(":8080", nil)
 
 }

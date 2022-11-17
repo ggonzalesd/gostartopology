@@ -11,6 +11,8 @@
         return valid;
     }
 
+    const timeNow = ()=> (window.performance.timeOrigin + window.performance.now())*1000000 
+
     const createPar = (focus, text="")=>{
         const par = document.createElement("p")
         par.classList.add("text-p")
@@ -29,29 +31,68 @@
 
 
     let index_p = 1
+    let modified = timeNow()
     let lines = []
 
-    const consoleSpan = document.getElementById("console")
-    const editorWrapper = document.getElementById("editor-wrapper")
-
-    consoleSpan.addEventListener("click", async (ev)=>{
-        const response = await fetch("http://192.168.1.44:8080/update-doc", {
-            method: 'POST',
-            headers: {
-                'Accept': '*/*',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({doc:lines})
-        });
-        console.log(response)
+    const fetchRefreshDocument = (server)=> fetch(server + "/refresh-doc", {
+        method: "GET",
+        headers: { 'Accept': '*/*'}
+    })
+    
+    const fetchSendDocument = (server)=> fetch(server + "/update-doc", {
+        method: 'POST',
+        headers: {
+            'Accept': '*/*',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({modified: timeNow(), doc: lines})
     })
 
+    const editorWrapper = document.getElementById("editor-wrapper")
+
+    const updateWrapper = (data)=>{
+        modified = data['modified']
+        doc = data['doc']
+        editorWrapper.innerHTML = ""
+        if(index_p<0)
+            index_p = 0
+        if(index_p>=doc.length)
+            index_p = doc.length-1
+        
+        for(let i=0; i<doc.length; i++)
+            editorWrapper.appendChild(
+                createPar(false, doc[i])
+            )
+        setFocus(editorWrapper.children[index_p])
+        lines = doc
+    }
+
+    fetchRefreshDocument("http://localhost:8080")
+    .then(data => data.text())
+    .then(data => {
+        data = JSON.parse(data)
+        updateWrapper(data)
+    })
+    .catch(err => {
+        console.error(err)
+    })
+
+    setInterval(() => {
+        fetchRefreshDocument("http://localhost:8080")
+        .then(data => data.text())
+        .then(data => {
+            data = JSON.parse(data)
+            //console.log(data['modified'] > modified)
+            if(data['modified'] > modified)
+                updateWrapper(data)
+        })
+        .catch(err => {
+            console.error(err)
+        })
+    }, 500);
 
     document.addEventListener("keydown", (ev)=>{
-    
-
         switch(ev.key){
-
             case "ArrowUp":
             case "ArrowDown":
 
@@ -67,8 +108,7 @@
                             index_p++
                     }
                     setFocus(editorWrapper.children[index_p])
-                    editorWrapper.children[index_p].innerText = lines[index_p] + "|"
-
+                    editorWrapper.children[index_p].innerText = lines[index_p]
                 }
             
             break
@@ -79,7 +119,7 @@
                     index_p = 0
                     lines.push("")
                     editorWrapper.appendChild(p)
-                    editorWrapper.children[index_p].innerText = lines[index_p] + "|"
+                    editorWrapper.children[index_p].innerText = lines[index_p]
                 } else {
                     editorWrapper.children[index_p].innerText = lines[index_p]
                     unFocus(editorWrapper.children[index_p])
@@ -87,13 +127,14 @@
                     if(editorWrapper.children.length-1 === index_p){
                         editorWrapper.appendChild(createPar(true, ""))
                         lines.push("");
-                        index_p++
                     } else {
-                        editorWrapper.insertBefore(createPar(true, ""), editorWrapper.children[index_p])
-                        lines.splice(index_p, 0, "");
+                        editorWrapper.insertBefore(createPar(true, ""), editorWrapper.children[index_p+1])
+                        lines.splice(index_p+1, 0, "");
                     }
-                    editorWrapper.children[index_p].innerText = lines[index_p] + "|"
+                    index_p++
+                    editorWrapper.children[index_p].innerText = lines[index_p]
                 }
+                modified = timeNow()
             break
 
             case "Backspace":
@@ -105,16 +146,15 @@
                             index_p--
                         if (editorWrapper.children.length > 0 && index_p >= 0){
                             setFocus(editorWrapper.children[index_p])
-                            editorWrapper.children[index_p].innerText = lines[index_p] + "|"
+                            editorWrapper.children[index_p].innerText = lines[index_p]
                         }
                     } else {
                         lines[index_p] = lines[index_p].substring(0, lines[index_p].length-1)
-                        editorWrapper.children[index_p].innerText = lines[index_p] + "|"
+                        editorWrapper.children[index_p].innerText = lines[index_p]
                     }
+                    modified = timeNow()
                 }
-
             break
-
 
             default:
                 if(isPrintable(ev.keyCode)){
@@ -126,21 +166,14 @@
                     } else {
                         lines[index_p] += ev.key
                     }
-                    editorWrapper.children[index_p].innerText = lines[index_p] + "|"
+                    editorWrapper.children[index_p].innerText = lines[index_p]
+                    modified = timeNow()
                 }
         }
 
-        (async ()=>{
-            await fetch("http://192.168.1.44:8080/update-doc", {
-            method: 'POST',
-            headers: {
-                'Accept': '*/*',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({doc:lines})
-            })
-        })();
+        if(isPrintable(ev.keyCode) || ev.key === "Backspace" || ev.key === "Enter"){
+            fetchSendDocument("http://localhost:8080")
+            .catch(err => console.err(err))
+        }
     })
-
-
 })()

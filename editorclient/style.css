@@ -3,6 +3,7 @@
     margin: 0;
 
     color: white;
+    font-family: 'Courier New', Courier, monospace;
 }
 
 body{
@@ -19,6 +20,10 @@ body{
 
 .focus-p{
     background-color: #906565;
+}
+
+.focus-p::after{
+    content: "|";
 }
 
 #console{

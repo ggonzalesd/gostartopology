@@ -1,5 +1,6 @@
 package main
 
 type DocumentEditor struct {
-	Doc []string `json:"doc"`
+	Modified int64    `json:"modified"`
+	Doc      []string `json:"doc"`
 }
