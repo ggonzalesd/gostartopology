@@ -3,25 +3,47 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 )
 
 var (
-	document   DocumentEditor
-	docChannel chan bool
+	document      DocumentEditor
+	remoteDocs    map[string]DocumentEditor
+	documentBlock chan bool
+	hostname      string
+	hostclient    string
+	remotes       []string
+	remotesBlock  chan bool
 )
 
 func main() {
-	docChannel = make(chan bool, 1)
+	if len(os.Args) > 2 {
+		remotesBlock = make(chan bool, 1)
+		documentBlock = make(chan bool, 1)
+		document = DocumentEditor{time.Now().UnixNano(), make([]string, 0)}
+		remoteDocs = make(map[string]DocumentEditor)
 
-	fmt.Println("Time: ", time.Now().UnixNano())
+		hostname = os.Args[1]
+		hostclient = os.Args[2]
 
-	document = DocumentEditor{time.Now().UnixNano(), make([]string, 0)}
+		fmt.Println("hostname:", hostname)
+		fmt.Println("hostclient:", hostclient)
 
-	http.HandleFunc("/update-doc", updateFromEditor)
-	http.HandleFunc("/refresh-doc", refreshToEditor)
+		for _, remote := range os.Args[3:] {
+			// Join to Star Network
+			fmt.Println("Remote:", remote)
+			go joinnetwork(remote)
+		}
 
-	fmt.Println("Listen al 8080")
-	http.ListenAndServe(":8080", nil)
+		http.HandleFunc("/update-doc", updateFromEditor)
+		http.HandleFunc("/refresh-doc", refreshToEditor)
 
+		go http.ListenAndServe(hostclient, nil)
+
+		listenStarnetwork()
+	} else {
+		fmt.Fprintln(os.Stderr, "./main <nodehost:port> <clienthost:port>")
+		fmt.Fprintln(os.Stderr, "./main <nodehost:port> <clienthost:port> <noderemote:port>")
+	}
 }

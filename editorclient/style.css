@@ -37,3 +37,25 @@ body{
 #console:hover{
     background-color: aquamarine;
 }
+
+.options{
+    padding: 5px 20px;
+}
+
+#btn-update{
+    background-color: #464646;
+    border: none;
+    border-radius: 5px;
+    padding: 10px;
+}
+
+#btn-update:hover{
+    background-color: #909090;
+}
+
+#input-ip-node{
+    background-color: #464646;
+    border: none;
+    border-radius: 5px;
+    padding: 10px;
+}

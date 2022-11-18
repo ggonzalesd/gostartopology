@@ -20,7 +20,17 @@ func updateFromEditor(w http.ResponseWriter, req *http.Request) {
 
 	decoder := json.NewDecoder(req.Body)
 	if decoder.Decode(&documentEditor) == nil {
+
+		documentBlock <- true
 		document = documentEditor
+		<-documentBlock
+
+		remotesBlock <- true
+		for _, remote := range remotes {
+			go syncdocument(remote)
+		}
+		<-remotesBlock
+
 		fmt.Println(document.Modified)
 		fmt.Println("---------------------------------")
 		for _, lines := range document.Doc {
@@ -37,5 +47,7 @@ func refreshToEditor(w http.ResponseWriter, req *http.Request) {
 
 	encoder := json.NewEncoder(w)
 
+	documentBlock <- true
 	encoder.Encode(document)
+	<-documentBlock
 }

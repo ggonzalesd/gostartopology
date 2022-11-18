@@ -29,10 +29,19 @@
         p.classList.remove("focus-p")
     }
 
+    const btnUpdateIp = document.getElementById("btn-update")
+    const inputIpNode = document.getElementById("input-ip-node")
 
     let index_p = 1
     let modified = timeNow()
     let lines = []
+    let serverhost ="http://localhost:9000"
+
+    inputIpNode.value = "localhost:9000"
+
+    btnUpdateIp.addEventListener("click", (ev)=>{
+        serverhost = "http://" + inputIpNode.value.trim()
+    })
 
     const fetchRefreshDocument = (server)=> fetch(server + "/refresh-doc", {
         method: "GET",
@@ -67,7 +76,7 @@
         lines = doc
     }
 
-    fetchRefreshDocument("http://localhost:8080")
+    fetchRefreshDocument(serverhost)
     .then(data => data.text())
     .then(data => {
         data = JSON.parse(data)
@@ -78,7 +87,7 @@
     })
 
     setInterval(() => {
-        fetchRefreshDocument("http://localhost:8080")
+        fetchRefreshDocument(serverhost)
         .then(data => data.text())
         .then(data => {
             data = JSON.parse(data)
@@ -172,7 +181,7 @@
         }
 
         if(isPrintable(ev.keyCode) || ev.key === "Backspace" || ev.key === "Enter"){
-            fetchSendDocument("http://localhost:8080")
+            fetchSendDocument(serverhost)
             .catch(err => console.err(err))
         }
     })
